@@ -69,7 +69,7 @@ describe('.get (specific go-ipfs features)', function () {
       content: Buffer.from(path)
     }]))
 
-    expect(files[2].hash).to.equal(expectedCid)
+    expect(files[2].cid.toString()).to.equal(expectedCid)
   })
 
   it('get path containing "+"s', async () => {

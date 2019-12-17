@@ -42,7 +42,7 @@ module.exports = configure(({ ky }) => {
 })
 
 function toCoreInterface (entry) {
-  entry.cid = new CID(entry.hash)
+  if (entry.hash) entry.cid = new CID(entry.hash)
   delete entry.hash
   return entry
 }

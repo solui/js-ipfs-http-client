@@ -5,7 +5,6 @@
 const { expect } = require('interface-ipfs-core/src/utils/mocha')
 const loadFixture = require('aegir/fixtures')
 const mh = require('multihashes')
-const CID = require('cids')
 const all = require('it-all')
 const pipe = require('it-pipe')
 const { TimeoutError } = require('ky-universal')
@@ -43,7 +42,7 @@ describe('.files (the MFS API part)', function () {
     const res = await all(ipfs.add(testfile))
 
     expect(res).to.have.length(1)
-    expect(res[0].hash).to.equal(expectedMultihash)
+    expect(res[0].cid.toString()).to.equal(expectedMultihash)
     expect(res[0].path).to.equal(expectedMultihash)
   })
 
@@ -56,7 +55,7 @@ describe('.files (the MFS API part)', function () {
     const res = await all(ipfs.add(file))
 
     expect(res).to.have.length(1)
-    expect(res[0].hash).to.equal(expectedBufferMultihash)
+    expect(res[0].cid.toString()).to.equal(expectedBufferMultihash)
     expect(res[0].path).to.equal(expectedBufferMultihash)
   })
 
@@ -67,7 +66,7 @@ describe('.files (the MFS API part)', function () {
     const res = await all(ipfs.add([{ path: '', content }]))
 
     expect(res).to.have.length(1)
-    expect(res[0].hash).to.equal(expectedHash)
+    expect(res[0].cid.toString()).to.equal(expectedHash)
     expect(res[0].path).to.equal(expectedHash)
   })
 
@@ -78,7 +77,7 @@ describe('.files (the MFS API part)', function () {
     const res = await all(ipfs.add(testfile, options))
 
     expect(res).to.have.length(1)
-    expect(res[0].hash).to.equal(expectedCid)
+    expect(res[0].cid.toString()).to.equal(expectedCid)
     expect(res[0].path).to.equal(expectedCid)
   })
 
@@ -89,7 +88,7 @@ describe('.files (the MFS API part)', function () {
     expect(files).to.have.length(1)
 
     // 'ipfs.object.get(<hash>)' should timeout because content wasn't actually added
-    return expect(ipfs.object.get(files[0].hash, { timeout: 2000 }))
+    return expect(ipfs.object.get(files[0].cid, { timeout: 2000 }))
       .to.be.rejectedWith(TimeoutError)
   })
 
@@ -97,7 +96,7 @@ describe('.files (the MFS API part)', function () {
     const res = await all(ipfs.add(testfile, { pin: false }))
 
     expect(res).to.have.length(1)
-    expect(res[0].hash).to.equal(expectedMultihash)
+    expect(res[0].cid.toString()).to.equal(expectedMultihash)
     expect(res[0].path).to.equal(expectedMultihash)
   })
 
@@ -137,7 +136,7 @@ describe('.files (the MFS API part)', function () {
       const res = await all(ipfs.add([file], options))
 
       expect(res).to.have.length(1)
-      const cid = new CID(res[0].hash)
+      const { cid } = res[0]
       expect(mh.decode(cid.multihash).name).to.equal(name)
     })
   })
@@ -210,7 +209,7 @@ describe('.files (the MFS API part)', function () {
       const res = await all(ipfs.add([file], options))
 
       expect(res).to.have.length(1)
-      const cid = new CID(res[0].hash)
+      const { cid } = res[0]
       expect(mh.decode(cid.multihash).name).to.equal(name)
     })
   })
@@ -225,7 +224,8 @@ describe('.files (the MFS API part)', function () {
     )
 
     expect(res).to.have.length(1)
-    expect(res[0]).to.deep.equal({ path: expectedCid, hash: expectedCid, size: 12 })
+    res[0].cid = res[0].cid.toString()
+    expect(res[0]).to.deep.equal({ path: expectedCid, cid: expectedCid, size: 12 })
   })
 
   it('.add with iterable', async () => {
@@ -233,7 +233,8 @@ describe('.files (the MFS API part)', function () {
     const res = await all(ipfs.add([Buffer.from('test')]))
 
     expect(res).to.have.length(1)
-    expect(res[0]).to.deep.equal({ path: expectedCid, hash: expectedCid, size: 12 })
+    res[0].cid = res[0].cid.toString()
+    expect(res[0]).to.deep.equal({ path: expectedCid, cid: expectedCid, size: 12 })
   })
 
   it('files.mkdir', async () => {
@@ -346,9 +347,10 @@ describe('.files (the MFS API part)', function () {
     })
 
     const stats = await ipfs.files.stat(file)
+    stats.cid = stats.cid.toString()
 
     expect(stats).to.deep.equal({
-      hash: 'QmQhouoDPAnzhVM148yCa9CbUXK65wSEAZBtgrLGHtmdmP',
+      cid: 'QmQhouoDPAnzhVM148yCa9CbUXK65wSEAZBtgrLGHtmdmP',
       size: 12,
       cumulativeSize: 70,
       blocks: 1,

@@ -84,7 +84,22 @@ describe('interface-ipfs-core tests', () => {
 
   tests.dht(commonFactory)
 
-  tests.files(commonFactory)
+  tests.files(commonFactory, {
+    skip: [
+      {
+        name: 'should ls directory',
+        reason: 'TODO unskip when go-ipfs supports --long https://github.com/ipfs/go-ipfs/pull/6528'
+      },
+      {
+        name: 'should read from outside of mfs',
+        reason: 'TODO not implemented in go-ipfs yet'
+      },
+      {
+        name: 'should ls from outside of mfs',
+        reason: 'TODO not implemented in go-ipfs yet'
+      }
+    ]
+  })
 
   tests.key(commonFactory, {
     skip: [

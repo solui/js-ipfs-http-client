@@ -1,9 +1,9 @@
 'use strict'
 
 const ndjson = require('iterable-ndjson')
+const CID = require('cids')
 const configure = require('../lib/configure')
 const toIterable = require('stream-to-it/source')
-const toCamel = require('../lib/object-to-camel')
 
 module.exports = configure(({ ky }) => {
   return async function * ls (path, options) {
@@ -31,12 +31,12 @@ module.exports = configure(({ ky }) => {
     for await (const pin of ndjson(toIterable(res.body))) {
       // For nodes that do not understand the `stream option`
       if (pin.Keys) {
-        for (const hash of Object.keys(pin.Keys)) {
-          yield { hash, type: pin.Keys[hash].Type }
+        for (const cid of Object.keys(pin.Keys)) {
+          yield { cid: new CID(cid), type: pin.Keys[cid].Type }
         }
         return
       }
-      yield toCamel(pin)
+      yield { cid: new CID(pin.Hash), type: pin.Type }
     }
   }
 })
