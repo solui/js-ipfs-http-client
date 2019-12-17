@@ -1,5 +1,6 @@
 'use strict'
 
+const CID = require('cids')
 const configure = require('../lib/configure')
 const toCamel = require('../lib/object-to-camel')
 
@@ -27,6 +28,12 @@ module.exports = configure(({ ky }) => {
     }).json()
 
     res.WithLocality = res.WithLocality || false
-    return toCamel(res)
+    return toCoreInterface(toCamel(res))
   }
 })
+
+function toCoreInterface (entry) {
+  entry.cid = new CID(entry.hash)
+  delete entry.hash
+  return entry
+}

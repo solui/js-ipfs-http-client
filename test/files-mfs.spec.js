@@ -6,12 +6,11 @@ const { expect } = require('interface-ipfs-core/src/utils/mocha')
 const loadFixture = require('aegir/fixtures')
 const mh = require('multihashes')
 const CID = require('cids')
-const values = require('pull-stream/sources/values')
-const pull = require('pull-stream/pull')
-const collect = require('pull-stream/sinks/collect')
+const all = require('it-all')
+const pipe = require('it-pipe')
+const { TimeoutError } = require('ky-universal')
 
 const f = require('./utils/factory')
-const expectTimeout = require('./utils/expect-timeout')
 
 const testfile = loadFixture('test/fixtures/testfile.txt')
 
@@ -41,7 +40,7 @@ describe('.files (the MFS API part)', function () {
   after(() => f.clean())
 
   it('.add file for testing', async () => {
-    const res = await ipfs.add(testfile)
+    const res = await all(ipfs.add(testfile))
 
     expect(res).to.have.length(1)
     expect(res[0].hash).to.equal(expectedMultihash)
@@ -54,7 +53,7 @@ describe('.files (the MFS API part)', function () {
     const expectedBufferMultihash = 'QmWfVY9y3xjsixTgbd9AorQxH7VtMpzfx2HaWtsoUYecaX'
     const file = Buffer.from('hello')
 
-    const res = await ipfs.add(file)
+    const res = await all(ipfs.add(file))
 
     expect(res).to.have.length(1)
     expect(res[0].hash).to.equal(expectedBufferMultihash)
@@ -65,7 +64,7 @@ describe('.files (the MFS API part)', function () {
     const expectedHash = 'QmWfVY9y3xjsixTgbd9AorQxH7VtMpzfx2HaWtsoUYecaX'
     const content = Buffer.from('hello')
 
-    const res = await ipfs.add([{ path: '', content }])
+    const res = await all(ipfs.add([{ path: '', content }]))
 
     expect(res).to.have.length(1)
     expect(res[0].hash).to.equal(expectedHash)
@@ -76,7 +75,7 @@ describe('.files (the MFS API part)', function () {
     const expectedCid = 'bafybeifogzovjqrcxvgt7g36y7g63hvwvoakledwk4b2fr2dl4wzawpnny'
     const options = { cidVersion: 1, rawLeaves: false }
 
-    const res = await ipfs.add(testfile, options)
+    const res = await all(ipfs.add(testfile, options))
 
     expect(res).to.have.length(1)
     expect(res[0].hash).to.equal(expectedCid)
@@ -86,15 +85,16 @@ describe('.files (the MFS API part)', function () {
   it('.add with only-hash=true', async () => {
     const content = String(Math.random() + Date.now())
 
-    const files = await ipfs.add(Buffer.from(content), { onlyHash: true })
+    const files = await all(ipfs.add(Buffer.from(content), { onlyHash: true }))
     expect(files).to.have.length(1)
 
     // 'ipfs.object.get(<hash>)' should timeout because content wasn't actually added
-    await expectTimeout(ipfs.object.get(files[0].hash), 4000)
+    return expect(ipfs.object.get(files[0].hash, { timeout: 2000 }))
+      .to.be.rejectedWith(TimeoutError)
   })
 
   it('.add with options', async () => {
-    const res = await ipfs.add(testfile, { pin: false })
+    const res = await all(ipfs.add(testfile, { pin: false }))
 
     expect(res).to.have.length(1)
     expect(res[0].hash).to.equal(expectedMultihash)
@@ -104,11 +104,11 @@ describe('.files (the MFS API part)', function () {
   it('.add pins by default', async () => {
     const newContent = Buffer.from(String(Math.random()))
 
-    const initialPins = await ipfs.pin.ls()
+    const initialPins = await all(ipfs.pin.ls())
 
-    await ipfs.add(newContent)
+    await all(ipfs.add(newContent))
 
-    const pinsAfterAdd = await ipfs.pin.ls()
+    const pinsAfterAdd = await all(ipfs.pin.ls())
 
     expect(pinsAfterAdd.length).to.eql(initialPins.length + 1)
   })
@@ -116,11 +116,11 @@ describe('.files (the MFS API part)', function () {
   it('.add with pin=false', async () => {
     const newContent = Buffer.from(String(Math.random()))
 
-    const initialPins = await ipfs.pin.ls()
+    const initialPins = await all(ipfs.pin.ls())
 
-    await ipfs.add(newContent, { pin: false })
+    await all(ipfs.add(newContent, { pin: false }))
 
-    const pinsAfterAdd = await ipfs.pin.ls()
+    const pinsAfterAdd = await all(ipfs.pin.ls())
 
     expect(pinsAfterAdd.length).to.eql(initialPins.length)
   })
@@ -134,7 +134,7 @@ describe('.files (the MFS API part)', function () {
       }
       const options = { hashAlg: name, rawLeaves: false }
 
-      const res = await ipfs.add([file], options)
+      const res = await all(ipfs.add([file], options))
 
       expect(res).to.have.length(1)
       const cid = new CID(res[0].hash)
@@ -151,7 +151,7 @@ describe('.files (the MFS API part)', function () {
       progress = p
     }
 
-    const res = await ipfs.add(testfile, { progress: progressHandler })
+    const res = await all(ipfs.add(testfile, { progress: progressHandler }))
 
     expect(res).to.have.length(1)
     expect(progress).to.be.equal(testfile.byteLength)
@@ -168,7 +168,7 @@ describe('.files (the MFS API part)', function () {
     }
 
     // TODO: needs to be using a big file
-    const res = await ipfs.add(testfile, { progress: progressHandler })
+    const res = await all(ipfs.add(testfile, { progress: progressHandler }))
 
     expect(res).to.have.length(1)
     expect(progress).to.be.equal(testfile.byteLength)
@@ -185,7 +185,7 @@ describe('.files (the MFS API part)', function () {
     }
 
     // TODO: needs to be using a directory
-    const res = await ipfs.add(testfile, { progress: progressHandler })
+    const res = await all(ipfs.add(testfile, { progress: progressHandler }))
 
     expect(res).to.have.length(1)
     expect(progress).to.be.equal(testfile.byteLength)
@@ -193,7 +193,7 @@ describe('.files (the MFS API part)', function () {
   })
 
   it('.add without progress options', async () => {
-    const res = await ipfs.add(testfile)
+    const res = await all(ipfs.add(testfile))
 
     expect(res).to.have.length(1)
   })
@@ -207,7 +207,7 @@ describe('.files (the MFS API part)', function () {
       }
       const options = { hashAlg: name, rawLeaves: false }
 
-      const res = await ipfs.add([file], options)
+      const res = await all(ipfs.add([file], options))
 
       expect(res).to.have.length(1)
       const cid = new CID(res[0].hash)
@@ -215,36 +215,25 @@ describe('.files (the MFS API part)', function () {
     })
   })
 
-  it('.addPullStream with object chunks and pull stream content', (done) => {
+  it('.add with object chunks and iterable content', async () => {
     const expectedCid = 'QmRf22bZar3WKmojipms22PkXH1MZGmvsqzQtuSvQE3uhm'
 
-    pull(
-      values([{ content: values([Buffer.from('test')]) }]),
-      ipfs.addPullStream(),
-      collect((err, res) => {
-        expect(err).to.not.exist()
-
-        expect(res).to.have.length(1)
-        expect(res[0]).to.deep.equal({ path: expectedCid, hash: expectedCid, size: 12 })
-        done()
-      })
+    const res = await pipe(
+      [{ content: [Buffer.from('test')] }],
+      ipfs.add,
+      all
     )
-  })
-
-  it('.add with pull stream', async () => {
-    const expectedCid = 'QmRf22bZar3WKmojipms22PkXH1MZGmvsqzQtuSvQE3uhm'
-    const res = await ipfs.add(values([Buffer.from('test')]))
 
     expect(res).to.have.length(1)
     expect(res[0]).to.deep.equal({ path: expectedCid, hash: expectedCid, size: 12 })
   })
 
-  it('.add with array of objects with pull stream content', async () => {
+  it('.add with iterable', async () => {
     const expectedCid = 'QmRf22bZar3WKmojipms22PkXH1MZGmvsqzQtuSvQE3uhm'
-    const res = await ipfs.add([{ content: values([Buffer.from('test')]) }])
+    const res = await all(ipfs.add([Buffer.from('test')]))
 
     expect(res).to.have.length(1)
-    expect(res[0]).to.eql({ path: expectedCid, hash: expectedCid, size: 12 })
+    expect(res[0]).to.deep.equal({ path: expectedCid, hash: expectedCid, size: 12 })
   })
 
   it('files.mkdir', async () => {
@@ -315,7 +304,7 @@ describe('.files (the MFS API part)', function () {
     await ipfs.files.write(file, Buffer.from('Hello, world'), {
       create: true
     })
-    const files = await ipfs.files.ls(folder)
+    const files = await all(ipfs.files.ls(folder))
 
     expect(files.length).to.equal(1)
   })
@@ -324,7 +313,7 @@ describe('.files (the MFS API part)', function () {
     const folder = `test-folder-${Math.random()}`
 
     await ipfs.files.mkdir(`/${folder}`)
-    const files = await ipfs.files.ls()
+    const files = await all(ipfs.files.ls())
 
     expect(files.find(file => file.name === folder)).to.be.ok()
   })
@@ -334,7 +323,7 @@ describe('.files (the MFS API part)', function () {
       create: true
     })
 
-    const buf = await ipfs.files.read('/test-folder/test-file-2.txt')
+    const buf = Buffer.concat(await all(ipfs.files.read('/test-folder/test-file-2.txt')))
 
     expect(buf.toString()).to.be.equal('hello world')
   })
@@ -342,7 +331,7 @@ describe('.files (the MFS API part)', function () {
   it('files.write without options', async () => {
     await ipfs.files.write('/test-folder/test-file-2.txt', Buffer.from('hello world'))
 
-    const buf = await ipfs.files.read('/test-folder/test-file-2.txt')
+    const buf = Buffer.concat(await all(ipfs.files.read('/test-folder/test-file-2.txt')))
 
     expect(buf.toString()).to.be.equal('hello world')
   })
@@ -383,7 +372,7 @@ describe('.files (the MFS API part)', function () {
     await ipfs.files.write(file, testfile, {
       create: true
     })
-    const buf = await ipfs.files.read(file)
+    const buf = Buffer.concat(await all(ipfs.files.read(file)))
 
     expect(Buffer.from(buf)).to.deep.equal(testfile)
   })

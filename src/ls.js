@@ -52,7 +52,7 @@ module.exports = configure(({ ky }) => {
         name: link.Name,
         path: path + '/' + link.Name,
         size: link.Size,
-        hash: link.Hash,
+        cid: new CID(link.Hash),
         type: typeOf(link),
         depth: link.Depth || 1
       }
