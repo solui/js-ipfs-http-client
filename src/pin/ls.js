@@ -36,7 +36,7 @@ module.exports = configure(({ ky }) => {
         }
         return
       }
-      yield { cid: new CID(pin.Hash), type: pin.Type }
+      yield { cid: new CID(pin.Cid), type: pin.Type }
     }
   }
 })
