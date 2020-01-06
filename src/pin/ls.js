@@ -17,7 +17,7 @@ module.exports = configure(({ ky }) => {
     options = options || {}
 
     const searchParams = new URLSearchParams(options.searchParams)
-    searchParams.set('stream', true)
+    searchParams.set('stream', options.stream == null ? true : options.stream)
     path.forEach(p => searchParams.append('arg', `${p}`))
     if (options.type) searchParams.set('type', options.type)
 
@@ -29,8 +29,7 @@ module.exports = configure(({ ky }) => {
     })
 
     for await (const pin of ndjson(toIterable(res.body))) {
-      // For nodes that do not understand the `stream option`
-      if (pin.Keys) {
+      if (pin.Keys) { // non-streaming response
         for (const cid of Object.keys(pin.Keys)) {
           yield { cid: new CID(cid), type: pin.Keys[cid].Type }
         }
