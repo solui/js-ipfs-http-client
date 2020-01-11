@@ -48,7 +48,7 @@
     "bs58": "^4.0.1",
     "buffer": "^5.4.2",
     "callbackify": "^1.1.0",
-    "cids": "~0.7.1",
+    "cids": "https://github.com/rvagg/js-cid.git#8b7f257106167d2ca1340e70e4fde9b6b3a1fbaf",
     "debug": "^4.1.0",
     "err-code": "^2.0.0",
     "explain-error": "^1.0.4",
